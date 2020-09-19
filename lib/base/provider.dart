@@ -39,7 +39,7 @@ abstract class OakProvider {
   /// Queries the database tree.
   /// 
   /// [path] must be a absolute (multi-)path.
-  /// [filter] may be null or any scheme a node must pass in order to
+  /// [filterSchema] may be null or any scheme a node must pass in order to
   /// be included in the query.
   /// If [path] is syntactically wrong, [InvalidPathSyntax] error is thrown.
   /// If [path] is a relative, then a [PathNoContext] error is thrown.
@@ -53,12 +53,12 @@ abstract class OakProvider {
   /// some descendant node of a document included in the query is replaced/created/deleted, excluding all document- and collection-subtrees (but including the document and collection descendants themselves)
   /// 
   /// [path] must be a absolute (multi-)path.
-  /// [filter] may be null or any scheme a node must pass in order to
+  /// [filterSchema] may be null or any scheme a node must pass in order to
   /// be included in the query.
   /// If [path] is syntactically wrong, [InvalidPathSyntax] error is thrown.
   /// If [path] is a relative, then a [PathNoContext] error is thrown.
   /// The stream may _dispatch_ a [DatabaseException] if querying fails at some point.
-  Stream<QuerySnapshot> watchQuery(String path, [Schema filter]);
+  Stream<QuerySnapshot> watchQuery(String path, [Schema filterSchema]);
 
   //##################################
   //#                                #
@@ -138,4 +138,3 @@ abstract class OakProvider {
   Future<void> update(String path, dynamic data);
 
 }
-

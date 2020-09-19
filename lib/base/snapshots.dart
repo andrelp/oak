@@ -8,7 +8,9 @@ part of 'oak_base.dart';
 /// When using [OakProvider.watch] one snapshot is fired immediately. Subsequently a snapshot is fired every time
 /// - The node is created (when node at the requested path did not exist previously)
 /// - The node is replaced (changed)
-/// - The node is a document or a map and some descendant node is replaced/created/deleted, excluding all document- and collection-subtrees (but including the document and collection nodes themselves)
+/// - the node is a document or map node and some of its descendant nodes are replaced/created/deleted, excluding all descendants of other documents or collections.
+/// - The node is a collection and a document is added to or removed from that collection.
+/// - The node is a list and elements are added or removed from the list.
 /// - The node is deleted
 /// - The normalization of the requested path changes (e.g. because a value of a cross reference was changed)
 class NodeSnapshot {
@@ -29,7 +31,8 @@ class NodeSnapshot {
   /// However, each direct or indirect child-sub-tree which is a document or a collection,
   /// is replaced by an instance of either [DocumentChildPlaceholder] or [CollectionChildPlaceholder].
   /// 
-  /// If the node is a collection or if the node does not exist, [value] will be set to `null`.
+  /// If the node is a collection, [value] will be a [List] of type [String] with the names of all documents contained in the collection.
+  /// If the node does not exist, [value] will be set to `null`.
   final dynamic value;
 
   /// Normalized path to the specific node fetched. If node does not exist, [normalizedReference] is `null`.
@@ -60,8 +63,12 @@ class CollectionChildPlaceholder {
 /// A snapshot for all nodes matching a query.
 /// 
 /// The first snapshot is fired immediately 
-/// and subsequently every time the set of nodes included in this query changes, a node included in the query is modified or
-/// some descendant node of a document included in the query is replaced/created/deleted, excluding all document- and collection-subtrees (but including the document and collection descendants themselves)
+/// and subsequently every time
+/// - the set of nodes included in this query changes (via creation/deletion/modification)
+/// - a node included in the query is modified
+/// - a document or map node is included in this query and some of its descendant nodes are replaced/created/deleted, excluding all descendants of other documents or collections.
+/// - a collection is included in the query and a document is added to or removed from that collection
+/// - a list is included in the query and an element was added to or removed from the list
 class QuerySnapshot {
   /// Snapshots of all nodes included in the query
   final List<NodeSnapshot> snapshots;

@@ -7,3 +7,4 @@ import 'package:oak/local_oak.dart';
 import '../oak.dart';
 
 part 'database.dart';
+part 'nodes.dart';

@@ -45,8 +45,7 @@ class LocalOakDatabase extends _LocalOakDatabaseProvider implements OakDatabase 
   LocalOakDatabase.empty();
   LocalOakDatabase.decode(Uint8List encodedDatabase);
 
-
-
+  
   Future<void> setDatabaseSchema(Map<String,Schema> classes, {Function(OakProvider) transitionTransactionHandler, bool deleteViolatingNodes=false}) {
 
   }

@@ -5,7 +5,7 @@ part of 'oak_base.dart';
 /// A Schema restricts the structure of a (sub-)tree of the database. It can also enforce specific types and restrictions on values of primitive-typed data.
 /// It may also be used as parameter for querying the database.
 abstract class Schema {
-  Schema._();
+  const Schema._();
 }
 
 // ###### primitive types ######

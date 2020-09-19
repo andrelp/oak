@@ -46,7 +46,7 @@ abstract class OakDatabase extends OakProvider {
   /// and the classes will not be changed, so that no changes to the database were made.
   /// 
   /// The future may resolve with a [DatabaseException].
-  Future<void> setDatabaseSchema(Map<String,Schema> classes, {Function(OakProvider) transitionTransactionHandler, bool deleteViolatingNodes=false});
+  Future<void> setDatabaseSchema(Map<String,Schema> classes, {TransactionHandler transitionTransactionHandler, bool deleteViolatingNodes=false});
 
   /// Reads the predefined classes and the database schema from the database.
   /// 
@@ -72,7 +72,7 @@ abstract class OakDatabase extends OakProvider {
   /// transaction resolves with an error.
   /// 
   /// The future may resolve with a [DatabaseException].
-  Future<void> runTransaction(Function(OakProvider) transactionHandler);
+  Future<void> runTransaction(TransactionHandler transactionHandler);
 
   //##################################
   //#                                #
@@ -100,3 +100,5 @@ abstract class OakDatabase extends OakProvider {
 }
 
 
+/// executes the atomic database operation of an transaction given an [OakProvider] instance
+typedef TransactionHandler(OakProvider provider);

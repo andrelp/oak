@@ -26,7 +26,7 @@ Each node in the tree can be referenced by (multiple) paths.
 + if _`path`_ is a path to a reference with value _`target`_, then _`path/subPath`_ is equivalent to _`target/subPath`_.
 + `.` and `..` also have similar meaning as in file systems. They are especially useful in combination with references. `/path/to/reference/.` and  `/path/to/reference/..` for example are not paths to a reference and its parent, but to the target of that reference and the parent of the target.
 
-Each path component (field name, map key and collection identifier) may only contain characters '0'-'9', 'a'-'z' and 'A'-'Z', may not be empty and may not begin with a number.
+Each path component (field name, map key and collection identifier) may only contain characters '0'-'9', 'a'-'z' and 'A'-'Z', may not begin with a number and may not be empty.
 A path may or may not end with an additional slash `/`, so `path/to/node` and `path/to/node/` are both valid.
 
 A normalized path is a absolute path which does not use cross-referencing and does not contain path components `.` or `..`.

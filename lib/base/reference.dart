@@ -85,7 +85,7 @@ class NodeReference {
 
       var isRelative = !path.startsWith('/');
       var pathComponents = (isRelative?path:path.substring(1)).split('/');
-      if (!pathComponents.every((pc) => RegExp(r'(\.\.|\.|~|([A-Za-z][A-Za-z0-9]+))').stringMatch(pc)==pc)) throw InvalidPathSyntax(path);
+      if (!pathComponents.every((pc) => RegExp(r'(\.\.|\.|~|([A-Za-z][A-Za-z0-9]*))').stringMatch(pc)==pc)) throw InvalidPathSyntax(path);
       var current = isRelative?null:root;
 
       for (var pc in pathComponents) {

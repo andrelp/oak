@@ -1,6 +1,30 @@
 
 
+import 'dart:async';
 
+import 'package:oak/base/oak_base.dart';
+
+enum _ActionType {
+  Get,Watch,Query,WatchQuery,
+  Set,Update,
+  Transaction,
+  GetDatabaseSchema,SetDatabaseSchema,
+  EncodeDatabase
+}
+
+class _Action {
+  final _ActionType type;
+  final NodeReference path;
+  final Schema filterSchema;
+  final dynamic data;
+  final Map<String,Schema> classes;
+  final bool deleteViolatingNodes;
+  final TransactionHandler transactionHandler;
+  final BlobReference blobReference;
+  final String transactionID;
+  final Completer completer;
+  const _Action({this.type,this.path,this.filterSchema,this.data,this.classes,this.deleteViolatingNodes,this.blobReference,this.completer,this.transactionHandler,this.transactionID});
+}
 
 /*
 possible database actions:
@@ -10,6 +34,7 @@ possible database actions:
 - watchQuery
 - set
 - update
+- transaction
 - getDatabaseSchema
 - setDatabaseSchema
 - encodeDatabase
@@ -22,40 +47,6 @@ possible database actions:
 
 
 
-
-
-/// A node in the data base tree
-class _DBNode {
-  _DBNode parent;
-}
-
-/// String, int, double, bool, (blob-)reference,Lists
-class _DBValueNode<T> extends _DBNode {
-  final T value;
-  _DBValueNode(this.value);
-}
-
-class _DBMapNode extends _DBNode {
-  Map<String,_DBNode> children;
-  Map<String,_DBNode> tempChildren;
-}
-
-class _DBDocumentNode extends _DBNode {
-  Map<String,_DBNode> children;
-  Map<String,_DBNode> tempChildren;
-}
-
-class _DBCollectionNode extends _DBNode {
-  Map<String,_DBNode> children;
-  Map<String,_DBNode> tempChildren;
-}
-
-
-class _DBAction {}
-
-class _DBGetAction {
-
-}
 
 
 
