@@ -59,9 +59,9 @@ class CollectionChildPlaceholder {
 
 /// A snapshot for all nodes matching a query.
 /// 
-/// When using [OakProvider.watchQuery] one snapshot is fired immediately 
-/// and subsequently every time the set of nodes included in this query changes
-/// or a node included in the query is modified.
+/// The first snapshot is fired immediately 
+/// and subsequently every time the set of nodes included in this query changes, a node included in the query is modified or
+/// some descendant node of a document included in the query is replaced/created/deleted, excluding all document- and collection-subtrees (but including the document and collection descendants themselves)
 class QuerySnapshot {
   /// Snapshots of all nodes included in the query
   final List<NodeSnapshot> snapshots;

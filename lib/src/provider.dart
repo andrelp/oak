@@ -48,8 +48,8 @@ abstract class OakProvider {
   /// Queries the database tree and watches for any changes.
   /// 
   /// The first snapshot is fired immediately 
-  /// and subsequently every time the set of nodes included in this query changes
-  /// or a node included in the query is modified.
+  /// and subsequently every time the set of nodes included in this query changes, a node included in the query is modified or
+  /// some descendant node of a document included in the query is replaced/created/deleted, excluding all document- and collection-subtrees (but including the document and collection descendants themselves)
   /// 
   /// [path] must be a absolute (multi-)path.
   /// [filter] may be null or any scheme a node must pass in order to
