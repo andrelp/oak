@@ -17,8 +17,28 @@ extension NodeTypeExtension on NodeType {
 /// and save the corresponding blob reference to the node in the database.
 class BlobData {
   /// raw data which is to be written to the database.
-  Uint8List data;
+  final Uint8List data;
   BlobData(this.data);
+}
+
+/// [ListData] is used as a parameter for [OakProvider.set] and [OakProvider.update].
+/// 
+/// The database will update the list by first, removing all child nodes
+/// which pass the [removeWhere] filter and afterwards adding the new
+/// values given by [add] to the list. `null` entries will be ignored
+/// and if [removeWhere] is `null`, so elements (child nodes) of the
+/// list will be removed. If [add] is `null`, its interpreted as the
+/// empty list.
+/// 
+/// For example `ListData(removeWhere: StringSchema(), add: [1,'2'])`
+/// removes every string in the list and adds the elements `1` and `'2'`
+/// afterwards at the end.
+class ListData {
+  /// elements to be added to end end of the list
+  final List<dynamic> add;
+  /// all elements which pass this test will be removed.
+  final Schema removeWhere;
+  ListData({this.add,this.removeWhere});
 }
 
 /// [DocumentData] is used as a parameter for [OakProvider.set] and [OakProvider.update].

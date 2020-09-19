@@ -78,6 +78,7 @@ abstract class OakProvider {
   /// - [BlobReference]. This will create a leaf node with the blob reference. If the blob however does not exist, the future will resolve with an [BlobDoesNotExistError] and no changes to the database will be made.
   /// - [BlobData]. If an instance of [BlobData] is given to the database, it will write the given data to it, assign it a unique id and save the corresponding blob reference to the node.
   /// - [List] with [String],[int],[double],[bool],[NodeReference],[BlobReference] and [BlobData] entries.
+  /// - [ListData]. This will update the list node children. If the node at [path] is not a list or does not exist, it will be created as a list node with entries from [ListData.add]. If the list node already exists, it will not be marked as replaced.
   /// - [Map] with [String] keys and arbitrary entries of type listed here. `null` entries will be ignored.
   /// - [DocumentData]. To create a new document, an instance of [DocumentData] is passed to this function. The behavior is essentially the same as for [Map] parameters with the only difference being, that the new node will be marked as an document and not as an map.
   /// - [CollectionData]. Will create a new collection nodes with given child documents.
@@ -88,7 +89,7 @@ abstract class OakProvider {
   /// If the new data would violate the database scheme, the future resolves
   /// with [DatabaseSchemaViolationException] and the write request is discarded.
   /// 
-  /// If the parent node to the node at [path] does not exist, the data cant be written
+  /// If the parent node to the node at [path] does not exist, the data can't be written
   /// and the future resolves with an [ParentNodeDoesNotExistException].
   /// 
   /// [path] must be a absolute path to a single node.
@@ -113,7 +114,7 @@ abstract class OakProvider {
   /// Embeds the data in the sub-tree at [path], so that the tree is minimally modified.
   /// 
   /// Allowed data types are the same as for [OakProvider.set] but used differently:
-  /// - if no node exist at [path] or if [data] is `null` or an instance of [String],[int],[double],[bool],[NodeReference],[BlobReference],[BlobData] or [List] it will behave exactly as [OakProvider.set].
+  /// - if no node exist at [path] or if [data] is `null` or an instance of [String],[int],[double],[bool],[NodeReference],[BlobReference],[BlobData],[ListData] or [List] it will behave exactly as [OakProvider.set].
   /// - If [data] is an instance of [Map] it will do the following:
   ///   * If the node does not exist or is not a Map, behave exactly as [OakProvider.set], otherwise:
   ///   * delete all child nodes for which there is a null entry in the map

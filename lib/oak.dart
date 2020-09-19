@@ -3,6 +3,6 @@
 /// More dartdocs go here.
 library oak;
 
-export 'src/oak_base.dart';
+export 'base/oak_base.dart';
 
 // TODO: Write documentation

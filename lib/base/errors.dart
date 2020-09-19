@@ -16,7 +16,8 @@ class UnsupportedDataError extends Error {}
 /// the requested node does not exist (yet), but also its parent node.
 class ParentNodeDoesNotExistException implements Exception {}
 
-/// This Error is thrown if a reference to a non existing blob is written to the database.
+/// This Error is thrown if a reference to a non existing blob is written to the database
+/// or if a blob is read from the database which does not exist
 class BlobDoesNotExistError extends Error {
   /// Blob which does not exist.
   final BlobReference reference;

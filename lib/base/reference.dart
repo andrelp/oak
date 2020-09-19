@@ -1,7 +1,7 @@
 part of 'oak_base.dart';
 
 // TODO: Long as shit explöination of paths and their termonology
-/// Relative or absolute path to a map value or node.
+/// Relative or absolute, single- or multi-path to a map value or node.
 class NodeReference {
 
   /// String of the path given by this instance.

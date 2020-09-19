@@ -70,7 +70,32 @@ abstract class OakDatabase extends OakProvider {
   /// using the provided [OakProvider] fails, all previous changes to the
   /// database by the [transactionHandler] will be rolled back and the 
   /// transaction resolves with an error.
+  /// 
+  /// The future may resolve with a [DatabaseException].
   Future<void> runTransaction(Function(OakProvider) transactionHandler);
+
+  //##################################
+  //#                                #
+  //#  Cloning & encoding            #
+  //#                                #
+  //##################################
+
+  /// Reads a blob from the database
+  /// 
+  /// It future resolves with a [BlobDoesNotExistError], if the blob does not exist.
+  /// The future may resolve with a [DatabaseException].
+  Future<Uint8List> readBlob(BlobReference reference);
+
+  //##################################
+  //#                                #
+  //#  encoding                      #
+  //#                                #
+  //##################################
+
+  //TODO: documentation
+
+  Future<Uint8List> encodeDatabase();
+  
 
 }
 

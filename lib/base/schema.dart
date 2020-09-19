@@ -1,6 +1,7 @@
 
 part of 'oak_base.dart';
 
+//TODO: long as hell documentation
 /// A Schema restricts the structure of a (sub-)tree of the database. It can also enforce specific types and restrictions on values of primitive-typed data.
 /// It may also be used as parameter for querying the database.
 abstract class Schema {
@@ -15,12 +16,13 @@ class StringSchema extends Schema {
   final String isEqualTo;
   /// indicates whether a String may be empty
   final bool mayBeEmpty;
-  /// the string must match the regular expression [regularExpression]
+  /// the whole string must match the regular expression [regularExpression]
   final RegExp regularExpression;
   /// the string must contain at least [minLength] characters
   final int minLength;
   /// the length of the string must not exceed [maxLength]
   final int maxLength;
+  
 
   StringSchema({this.isEqualTo,this.mayBeEmpty=true,this.regularExpression,this.minLength,this.maxLength}) : super._();
 }
