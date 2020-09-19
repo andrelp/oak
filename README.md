@@ -8,7 +8,7 @@ The database is structured as a tree with below listed node types:
 | | |
 | ------ | ------ |
 | _primitives_ | `String`, `int`, `double`, `bool`. These are the leaf nodes of the tree which hold all the data. |
-| References | A reference to any other node in the tree. References are also leaf nodes.  |
+| References | A reference to any other node in the tree. References are also leaf nodes. |
 | Lists | Lists are branch nodes whose children may only be leaf nodes. A list may only contain primitives and (blob-)references.  |
 | Maps | Maps with string keys. A map is a branch node with arbitrary child nodes. Each child node is identifies by a key. |
 | Documents | Documents are essentially maps. Documents are branch nodes with arbitrary fields (child nodes). Each child node is identifies by a key. Maps and documents only differ in how the data is retrieved (see below). |
@@ -29,7 +29,8 @@ Each node in the tree can be referenced by (multiple) paths.
 Each path component (field name, map key and collection identifier) may only contain characters '0'-'9', 'a'-'z' and 'A'-'Z', may not begin with a number and may not be empty.
 A path may or may not end with an additional slash `/`, so `path/to/node` and `path/to/node/` are both valid.
 
-A normalized path is a absolute path which does not use cross-referencing and does not contain path components `.` or `..`.
+A normalized path is a path which does not use cross-referencing and does not contain path components `.` or `..`.
+
 
 ### Multi paths
 

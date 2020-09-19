@@ -1,64 +1,42 @@
+part of 'local_base.dart';
 
-
-import 'dart:async';
-
-import 'package:oak/base/oak_base.dart';
 
 enum _ActionType {
   Get,Watch,Query,WatchQuery,
   Set,Update,
   Transaction,
   GetDatabaseSchema,SetDatabaseSchema,
-  EncodeDatabase
+  EncodeDatabase,
+  ReadBlob
 }
 
 class _Action {
   final _ActionType type;
-  final NodeReference path;
+  /// required argument for [_ActionType.Get],[_ActionType.Watch],[_ActionType.Query],
+  /// [_ActionType.WatchQuery],[_ActionType.Set] and [_ActionType.Update].
+  /// Is guaranteed not to be a multi-path when [type] is [_ActionType.Get],
+  /// [_ActionType.Watch],[_ActionType.Set] and [_ActionType.Update]
+  final NodeReference reference;
+  /// optional argument for [_ActionType.Query],[_ActionType.WatchQuery]
   final Schema filterSchema;
+  /// optional argument for [_ActionType.Set],[_ActionType.Update]
   final dynamic data;
+  /// required argument for [_ActionType.SetDatabaseSchema]
   final Map<String,Schema> classes;
+  /// required argument for [_ActionType.SetDatabaseSchema]
   final bool deleteViolatingNodes;
+  /// optional argument for [_ActionType.SetDatabaseSchema]
+  /// and required argument for [_ActionType.Transaction]
   final TransactionHandler transactionHandler;
+  /// required argument for [_ActionType.ReadBlob]
   final BlobReference blobReference;
+  /// required argument for get,watch,query,watchQuery,set,update
+  /// May be null if action is executed outside a transaction
   final String transactionID;
+  /// required for every action except [_ActionType.Watch],[_ActionType.WatchQuery]
   final Completer completer;
-  const _Action({this.type,this.path,this.filterSchema,this.data,this.classes,this.deleteViolatingNodes,this.blobReference,this.completer,this.transactionHandler,this.transactionID});
+  /// required for [_ActionType.Watch],[_ActionType.WatchQuery]
+  final StreamController streamController;
+  const _Action({this.type,this.reference,this.filterSchema,this.data,this.classes,this.deleteViolatingNodes,this.blobReference,this.completer,this.transactionHandler,this.transactionID,this.streamController});
 }
-
-/*
-possible database actions:
-- get
-- watch
-- query
-- watchQuery
-- set
-- update
-- transaction
-- getDatabaseSchema
-- setDatabaseSchema
-- encodeDatabase
-*/
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-1) execute write action on database by using "temp" children
-2) Check for schema violation
-3) roll back if neccessary
-4) integrate change in DB and mark each *replaced* node as modified and each document or map node as modified for which one of their descendants was created, replaced or deleted
-5) redo every query and get which has a watch open and fire event if neccessary
-6) unmark every node.
-
-*/
-
 

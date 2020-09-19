@@ -12,9 +12,8 @@ abstract class OakProvider {
 
   /// Retrieves data from a node in the database tree.
   /// 
-  /// [path] must be a absolute path to a single node.
+  /// [path] may not be a multi-path
   /// If [path] is syntactically wrong, [InvalidPathSyntax] error is thrown.
-  /// If [path] is a relative, then a [PathNoContext] error is thrown.
   /// If [path] is a multi path, [InvalidUseOfMultiPath] error is thrown.
   /// The future may _resolve_ with a [DatabaseException] if retrieval fails.
   Future<NodeSnapshot> get(String path);
@@ -29,20 +28,18 @@ abstract class OakProvider {
   /// - the node is deleted
   /// - the normalization of the requested path changes (e.g. because a value of a cross reference was changed)
   /// 
-  /// [path] must be a absolute path to a single node.
+  /// [path] may not be a multi-path
   /// If [path] is syntactically wrong, [InvalidPathSyntax] error is thrown.
-  /// If [path] is a relative, then a [PathNoContext] error is thrown.
   /// If [path] is a multi path, [InvalidUseOfMultiPath] error is thrown.
   /// The stream may _dispatch_ a [DatabaseException] if retrieval fails at some point.
   Stream<NodeSnapshot> watch(String path);
 
   /// Queries the database tree.
   /// 
-  /// [path] must be a absolute (multi-)path.
+  /// [path] must be a (multi-)path.
   /// [filterSchema] may be null or any scheme a node must pass in order to
   /// be included in the query.
   /// If [path] is syntactically wrong, [InvalidPathSyntax] error is thrown.
-  /// If [path] is a relative, then a [PathNoContext] error is thrown.
   /// The future may _resolve_ with a [DatabaseException] if querying fails.
   Future<QuerySnapshot> query(String path, [Schema filterSchema]);
 
@@ -52,11 +49,10 @@ abstract class OakProvider {
   /// and subsequently every time the set of nodes included in this query changes, a node included in the query is modified or
   /// some descendant node of a document included in the query is replaced/created/deleted, excluding all document- and collection-subtrees (but including the document and collection descendants themselves)
   /// 
-  /// [path] must be a absolute (multi-)path.
+  /// [path] must be a (multi-)path.
   /// [filterSchema] may be null or any scheme a node must pass in order to
   /// be included in the query.
   /// If [path] is syntactically wrong, [InvalidPathSyntax] error is thrown.
-  /// If [path] is a relative, then a [PathNoContext] error is thrown.
   /// The stream may _dispatch_ a [DatabaseException] if querying fails at some point.
   Stream<QuerySnapshot> watchQuery(String path, [Schema filterSchema]);
 
@@ -92,9 +88,8 @@ abstract class OakProvider {
   /// If the parent node to the node at [path] does not exist, the data can't be written
   /// and the future resolves with an [ParentNodeDoesNotExistException].
   /// 
-  /// [path] must be a absolute path to a single node.
+  /// [path] may not be a multi-path
   /// If [path] is syntactically wrong, [InvalidPathSyntax] error is thrown.
-  /// If [path] is a relative, then a [PathNoContext] error is thrown.
   /// If [path] is a multi path, [InvalidUseOfMultiPath] error is thrown.
   /// The future may _resolve_ with a [DatabaseException] if writing to the database fails.
   Future<void> set(String path, dynamic data);
@@ -104,9 +99,8 @@ abstract class OakProvider {
   /// 
   /// if the node or a part of its path do not exist, nothing happens.
   /// 
-  /// [path] must be a absolute path to a single node.
+  /// [path] may not be a multi-path
   /// If [path] is syntactically wrong, [InvalidPathSyntax] error is thrown.
-  /// If [path] is a relative, then a [PathNoContext] error is thrown.
   /// If [path] is a multi path, [InvalidUseOfMultiPath] error is thrown.
   /// The future may _resolve_ with a [DatabaseException] if writing to the database fails.
   Future<void> delete(String path) => set(path,null);
@@ -130,9 +124,8 @@ abstract class OakProvider {
   /// If the parent node to the node at [path] does not exist, the data cant be written
   /// and the future resolves with an [ParentNodeDoesNotExistException].
   /// 
-  /// [path] must be a absolute path to a single node.
+  /// [path] may not be a multi-path
   /// If [path] is syntactically wrong, [InvalidPathSyntax] error is thrown.
-  /// If [path] is a relative, then a [PathNoContext] error is thrown.
   /// If [path] is a multi path, [InvalidUseOfMultiPath] error is thrown.
   /// The future may _resolve_ with a [DatabaseException] if writing to the database fails.
   Future<void> update(String path, dynamic data);
