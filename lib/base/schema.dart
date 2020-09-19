@@ -8,7 +8,11 @@ abstract class Schema {
   const Schema._();
 }
 
-// ###### primitive types ######
+//##################################
+//#                                #
+//#  Leaf node schemata            #
+//#                                #
+//##################################
 
 /// Node must be of primitive type String.
 class StringSchema extends Schema {
@@ -72,7 +76,11 @@ class BlobReferenceSchema extends Schema {
   BlobReferenceSchema() : super._();
 }
 
-// ###### List & Map ######
+//##################################
+//#                                #
+//#  List & map                    #
+//#                                #
+//##################################
 
 /// Node must be a List
 class ListSchema extends Schema {
@@ -96,7 +104,11 @@ class MapSchema extends Schema {
   MapSchema({this.schema=const <String,Schema>{},this.noOtherKeys=false,this.noLessKeys=false,this.mustMatchKeysExactly=false}) : super._();
 }
 
-// ###### Collections & Documents ######
+//##################################
+//#                                #
+//#  Collections & Documents       #
+//#                                #
+//##################################
 
 /// Node must be Collection
 class CollectionSchema extends Schema {
@@ -116,13 +128,15 @@ class DocumentSchema extends Schema {
   final bool noLessFields;
   /// if [mustMatchFields] is `true`, documents must have exactly those fields specified in [schema] and no more and no less. This excludes fields with a `NullableSchema`s. 
   final bool mustMatchFieldsExactly;
-  /// [path] may be any (multi-)path. The document must be located at a path matching which have a matching in [path].
-  final NodeReference path;
-
-  DocumentSchema({this.schema=const <String,Schema>{},this.noOtherFields=false,this.noLessFields=false,this.mustMatchFieldsExactly=false,this.path}) : super._();
+  
+  DocumentSchema({this.schema=const <String,Schema>{},this.noOtherFields=false,this.noLessFields=false,this.mustMatchFieldsExactly=false}) : super._();
 }
 
-// ###### Miscellaneous ###### 
+//##################################
+//#                                #
+//#  Miscellaneous                 #
+//#                                #
+//##################################
 
 /// Node with this schema might exist or might not exist
 class NullableSchema extends Schema {
@@ -136,6 +150,7 @@ class DynamicSchema extends Schema {
   DynamicSchema() : super._();
 }
 
+
 /// Node must follow the schema defined in the database with the name [name].
 /// If the database doesn't know the class, it will treat this schema equivalently to [DynamicSchema].
 class ClassSchema extends Schema {
@@ -146,7 +161,11 @@ class ClassSchema extends Schema {
   }
 }
 
-// ###### Logical Operators ######
+//##################################
+//#                                #
+//#  Logical operator              #
+//#                                #
+//##################################
 
 /// Node value must follow each schema given by [schemata].
 class AndSchema extends Schema {
