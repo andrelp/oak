@@ -96,45 +96,61 @@ class _DBTree {
 
   /// Returns the set of all nodes included in the given (multi-path)
   Set<_Node> resolveMultiPath(NodeReference reference) {
-    // Wrong implementation: forget to use references (soo locate function)
-    return null;
-    /*Set<_Node> combine(Set<_Node> a, Set<_Node> b)
+
+    Set<_Node> combine(Set<_Node> a, Set<_Node> b)
       => <_Node>{}..addAll(a)..addAll(b);
-    if (reference.isMultiPath)
-      return reference.compositePathComponents.map((cpc) => resolveMultiPath(cpc)).fold<Set<_Node>>(<_Node>{}, combine);
-    if (reference.isRootPath) return <_Node>{root};
-    final parentSet = resolveMultiPath(reference.prefixPath);
-    return parentSet.map<Set<_Node>>((node) {
-      if (reference.lastPathComponent=='..') return <_Node>{node.parentNode};
-      if (reference.lastPathComponent=='.') return <_Node>{node};
-      if (reference.lastPathComponent=='~') {
-        if (node is _NamedBranchNode) return <_Node>{}..addAll((node.actionChildren??node.children).values);
+    
+    if (reference.isCompositePath) {
+      return reference.compositePathComponents.map((e) => resolveMultiPath(e)).fold(<_Node>{}, combine);
+    }
+
+    Set<_Node> Function(NodeReference reference) find;
+
+    Set<_Node> nextNodes(_Node current, String pathComponent) {
+      if (current is _NamedBranchNode) {
+        if (pathComponent=='.') return <_Node>{current};
+        if (pathComponent=='..') return <_Node>{current.parentNode};
+        if (pathComponent=='~') return <_Node>{}..addAll(current.children.values);
+        return <_Node>{current.children[pathComponent]};
+      } else if (current is _LeafNode<NodeReference>) {
+        var target = locateNode(current.value);
+        if (target==null) return <_Node>{};
+        return nextNodes(target, pathComponent);
+      } else {
         return <_Node>{};
       }
-      if (node is _NamedBranchNode) return <_Node>{(node.actionChildren??node.children)[reference.lastPathComponent]};
-      return <_Node>{};
-    }).fold<Set<_Node>>(<_Node>{}, combine)..removeWhere((e) => e==null);*/
+    }
+
+    find = (reference) {
+      var path = reference.pathComponents;
+      var current = <_Node>{root};
+      for (var pc in path) {
+        current = current.map((cn) => nextNodes(cn,pc)).fold(<_Node>{}, combine);
+        if (current==null) return null;
+      }
+      return current;
+    };
     
+    return find(reference);
   }
 
-  /*
-
-  Check for schema violation a such: Start with node class combination '/', 'Root'.
-  1) for every node,class combination that comes up define variables E(path A,class B), meaning: node at path A satisfies the class B.
-  2) Create variables Var(path A,class B,path C,String varName): while checking node at path A for class B a Value variable by the name varName is in class B.
-    Var(...) is a variable if true, meaning that node at path C is in the group of nodes which values must be equal to one another
-  3) Analogous create NodeVar(...)
-  4) create for any pairing {A,B} of Var(...) that come up, the formula A∧B⇒C where C is either true or false (given the structure of the tree)
-  5) Analogous create for every pairing of NodeVar(...) these clauses.
-  6) create for every node,class comb that comes up: E(...) ⇔ X, where X is some clause depending on set of all Var(...),NodeVar(...) and E(...)
-  7) combine clauses to Z(node,class) = ( ⋀(VarA∧VarB⇒VarC) ∧ ⋀(NodeA∧NodeB⇒NodeC) ∧ E(...) ⇔ X )
-  8) for every E(...) variable that comes up recursively redo steps 1 through 8.
-  9) Combine them Schema = ⋀Z(node,class)
-  10) If Schema is solvable then hurray
-
-  */
+  
 
   bool fitSchema(_Node node, Schema schema, Map<String, Schema> classes) {
+    /*
+    Check fot schema violation: Create a class A for the schema given and start with this node class combination:
+    1) for every node,class combination that comes up, define variables E(path A,class B), meaning: node at path A satisfies the class B.
+    2) Create variables Var(path A,class B,path C,String varName): while checking node at path A for class B a Value variable by the name varName is in class B.
+      Var(...) is a variable if true, meaning that node at path C is in the group of nodes which values must be equal to one another
+    3) Analogous create NodeVar(...)
+    4) create for any pairing {A,B} of Var(...) that come up, the formula A∧B⇒C where C is either true or false (given the structure of the tree)
+    5) Analogous create for every pairing of NodeVar(...) these clauses.
+    6) create for every node,class comb that comes up: E(...) ⇔ X, where X is some clause depending on set of all Var(...),NodeVar(...) and E(...)
+    7) combine clauses to Z(node,class) = ( ⋀(VarA∧VarB⇒VarC) ∧ ⋀(NodeA∧NodeB⇒NodeC) ∧ E(...) ⇔ X )
+    8) for every E(...) variable that comes up recursively redo steps 1 through 8.
+    9) Combine them Schema = ⋀Z(node,class)
+    10) If Schema is solvable then hurray, the node follows the given schema.
+    */
     
     // unused class name to assign [schema] a class name
     final rootClassName = classes.keys.fold<String>('', (p,e) => (e.length>p.length)?e:p) + '_';

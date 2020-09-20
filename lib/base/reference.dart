@@ -15,7 +15,7 @@ class NodeReference {
   /// If this path is a composed path, [lastPathComponent] is `null`. 
   /// If this is a the root reference '/', then [lastPathComponent] is an empty string.
   String get lastPathComponent => isCompositePath?null:path.split('/').last;
-  /// returns a list of all path components. If this is a multi path, it returns `null`.
+  /// returns a list of all path components. If this is a composed path, it returns `null`.
   /// If it is the root path '/' it returns an empty list.
   List<String> get pathComponents => isCompositePath?null:(isRootPath?[]:path.substring(1).split('/'));
   /// [compositePathComponents] is a List of all paths this composed path is composed of.

@@ -40,6 +40,10 @@ class Variable extends Expression {
     if (v==null) throw VariableNoValueError(name);
     return v;
   }
+  @override
+  String toString() {
+    return 'Var[$name]'; 
+  }
 }
 
 class _Not extends Expression {
@@ -48,6 +52,10 @@ class _Not extends Expression {
   @override
   bool evaluate(Map<String, bool> varValues) {
     return !child.evaluate(varValues);
+  }
+  @override
+  String toString() {
+    return '¬${child.toString()}'; 
   }
 }
 
@@ -58,6 +66,10 @@ class _And extends Expression {
   bool evaluate(Map<String, bool> varValues) {
     return children.every((e) => e.evaluate(varValues));
   }
+  @override
+  String toString() {
+    return '(' + children.join('∧') + ')';
+  }
 }
 
 class _Or extends Expression {
@@ -66,6 +78,10 @@ class _Or extends Expression {
   @override
   bool evaluate(Map<String, bool> varValues) {
     return children.any((e) => e.evaluate(varValues));
+  }
+  @override
+  String toString() {
+    return '(' + children.join('∨') + ')';
   }
 }
 
@@ -83,6 +99,10 @@ class _Xor extends Expression {
     }
     return any;
   }
+  @override
+  String toString() {
+    return '(' + children.join('⊕') + ')';
+  }
 }
 
 class _Iff extends Expression {
@@ -95,6 +115,10 @@ class _Iff extends Expression {
     var vb = b.evaluate(varValues);
     return (va&&vb)||(!va&&!vb);
   }
+  @override
+  String toString() {
+    return '(' + a.toString() + '⇔' + b.toString() + ')';
+  }
 }
 
 class Value extends Expression {
@@ -102,6 +126,10 @@ class Value extends Expression {
   Value(bool value) : this.value = value??false;
   @override
   bool evaluate(Map<String,bool> varValues) => value;
+  @override
+  String toString() {
+    return value?'true':'false';
+  }
 }
 
 Expression not(Expression child) {
