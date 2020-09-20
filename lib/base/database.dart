@@ -20,7 +20,6 @@ abstract class OakDatabase extends OakProvider {
   /// One may define for example a class for a person who is friends with other persons as such:
   /// ```
   ///  classes['Person'] = DocumentSchema(
-  ///    path: NodeReference.parse('/persons/~'),
   ///    schema: {
   ///      'name': StringSchema(),
   ///      'friends': ListSchema(

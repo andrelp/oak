@@ -109,3 +109,51 @@ For every query watch snapshot save
 1) set of normalized paths of every included node in the snap
 
  */
+
+
+/// A person can only be friends with another person if they have one hobby in common
+/// and if a person A is married to person b, so must person b be married to person a.
+var personClass =  VariableContext(AndSchema([
+  NodeVariable("spouse"),
+  PathSchema(NodeReference.parse('/persons/~')),
+  DocumentSchema(
+    mustMatchFieldsExactly: true,
+    schema: {
+      'name': StringSchema(),
+      'hobbies': ListSchema(
+        every: StringSchema(),
+        any: ValueVariable("common hobby")
+      ),
+      'fiends': ListSchema(
+        every: ReferenceSchema(
+          referentSchema: ClassSchema("Person")
+        ),
+        any: ReferenceSchema(
+          referentSchema: DocumentSchema(
+            mustMatchFieldsExactly: false,
+            schema: {
+              'hobbies': ListSchema(
+                any: ValueVariable("common hobby")
+              ),
+            }
+          )
+        )
+      ),
+      'spouse': NullableSchema(ReferenceSchema(
+        referentSchema: AndSchema([
+          ClassSchema("Person"),
+          DocumentSchema(
+            mustMatchFieldsExactly: false,
+            schema: {
+              'spouse': ReferenceSchema(
+                referentSchema: NodeVariable("spouse")
+              )
+            }
+          ) 
+        ])
+      ))
+    }
+  )
+]));
+
+

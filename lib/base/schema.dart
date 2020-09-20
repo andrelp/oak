@@ -8,6 +8,7 @@ abstract class Schema {
   const Schema._();
 }
 
+
 //##################################
 //#                                #
 //#  Leaf node schemata            #
@@ -65,7 +66,7 @@ class BoolSchema extends Schema {
 
 /// Node must be a reference
 class ReferenceSchema extends Schema {
-  /// The referenced data must follow the schema [referentSchema]. 
+  /// The referenced node must follow the schema [referentSchema]. 
   final Schema referentSchema; 
 
   ReferenceSchema({this.referentSchema}) : super._();
@@ -84,10 +85,16 @@ class BlobReferenceSchema extends Schema {
 
 /// Node must be a List
 class ListSchema extends Schema {
-  /// Each element in the list must follow the schema [elementSchema]. 
-  final Schema elementSchema; 
+  /// Each element in the list must follow the schema [every]. 
+  final Schema every;
 
-  ListSchema({this.elementSchema}) : super._();
+  /// At least one element in the list must follow the schema [any]. 
+  final Schema any;
+
+  /// Exactly one element in the list must follow the schema [one]
+  final Schema one;
+
+  ListSchema({this.every,this.any,this.one}) : super._();
 }
 
 /// Node value must be a map.
@@ -122,14 +129,10 @@ class CollectionSchema extends Schema {
 class DocumentSchema extends Schema {
   /// each child node of the document must follow the given schema by [schema] to their associated field names.
   final Map<String,Schema> schema;
-  /// if [noOtherFields] is `true`, document may not have child fields which are not listed in [schema].
-  final bool noOtherFields;
-  /// if [noLessFields] is `true`, document must have at least all fields which are listed in [schema]. This excludes fields with a `NullableSchema`s.
-  final bool noLessFields;
-  /// if [mustMatchFields] is `true`, documents must have exactly those fields specified in [schema] and no more and no less. This excludes fields with a `NullableSchema`s. 
+  /// if [mustMatchFields] is `true`, documents must have exactly those fields specified in [schema] and no more. 
   final bool mustMatchFieldsExactly;
   
-  DocumentSchema({this.schema=const <String,Schema>{},this.noOtherFields=false,this.noLessFields=false,this.mustMatchFieldsExactly=false}) : super._();
+  DocumentSchema({this.schema=const <String,Schema>{},this.mustMatchFieldsExactly=false}) : super._();
 }
 
 //##################################
@@ -150,6 +153,15 @@ class DynamicSchema extends Schema {
   DynamicSchema() : super._();
 }
 
+/// Node must be located at a path matching the (multi-) path given by [path]
+class PathSchema extends Schema {
+  /// Node must be located at a path matching the (multi-) path given by [path]
+  /// If path is `null` this schema is evaluated same as [DynamicSchema]
+  NodeReference path; 
+
+  PathSchema(this.path) : super._();
+}
+
 
 /// Node must follow the schema defined in the database with the name [name].
 /// If the database doesn't know the class, it will treat this schema equivalently to [DynamicSchema].
@@ -159,6 +171,27 @@ class ClassSchema extends Schema {
   ClassSchema(this.name) : super._() {
     if (name==null) throw NullThrownError();
   }
+}
+
+//##################################
+//#                                #
+//#  Schema Variables              #
+//#                                #
+//##################################
+
+class VariableContext extends Schema {
+  final Schema child;
+  VariableContext(this.child) : super._();
+}
+
+class ValueVariable extends Schema {
+  final String name;
+  ValueVariable(this.name) : super._();
+}
+
+class NodeVariable extends Schema {
+  final String name;
+  NodeVariable(this.name) : super._();
 }
 
 //##################################
