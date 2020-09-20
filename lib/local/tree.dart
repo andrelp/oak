@@ -6,8 +6,9 @@ class _DBTree {
 
   _DBTree(this.root);
 
-  /// Returns the node at reference. Returns null if the node does not exist
-  _Node locateNode(NodeReference reference) {
+  /// first element of the list is located node or `null` if not found,
+  /// second element is set of all used references to find the node
+  List locateNodeAndReturnReferences(NodeReference reference) {
     if (reference.isMultiPath) throw InvalidUseOfMultiPath(reference);
     // used to determine whether a reference points to one of its children
     var usedReferenceNodes = <String>{};
@@ -40,12 +41,17 @@ class _DBTree {
       return current;
     };
     
-    return locate(reference);
+    return [locate(reference),usedReferenceNodes];
+  }
+
+  /// Returns the node at reference. Returns null if the node does not exist
+  _Node locateNode(NodeReference reference) {
+    return locateNodeAndReturnReferences(reference)[0];
   }
 
   /// Locates the parent node of the node at [reference].
   /// Returns `null` if the parent does not exist (including when the root node is at [reference])
-  _Node locateParentNode(NodeReference reference) {
+  /*_Node locateParentNode(NodeReference reference) {
     if (reference.isMultiPath) throw InvalidUseOfMultiPath(reference);
     if (reference.isRootPath) return null;
     var pre = locateNode(reference.prefixPath);
@@ -64,7 +70,7 @@ class _DBTree {
     } else {
       return null;
     }
-  }
+  }*/
 
   dynamic extractValue(_Node node) {
     if (node==null) throw NullThrownError();
@@ -376,7 +382,7 @@ class _DBTree {
       }
 
       // create clause for this node and class pair and add to all clauses
-      var clause = l.and([
+      final clause = l.and([
         l.iff(pair.expressionVariable, applySchema(node, schema)),
         ...boundaryConditions
       ]);

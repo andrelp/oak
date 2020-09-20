@@ -9,6 +9,7 @@ class _LocalOakDatabaseProvider extends OakProvider {
 
   _LocalOakDatabaseProvider(this._backbone, {this.transactionID});
   
+  @override
   Future<NodeSnapshot> get(String path) {
     var reference = NodeReference.parse(path);
     if (reference.isMultiPath) throw InvalidUseOfMultiPath(reference);
@@ -23,20 +24,7 @@ class _LocalOakDatabaseProvider extends OakProvider {
     return completer.future;
   }
 
-  Stream<NodeSnapshot> watch(String path) {
-    var reference = NodeReference.parse(path);
-    if (reference.isMultiPath) throw InvalidUseOfMultiPath(reference);
-    var streamController = StreamController<NodeSnapshot>();
-    var action = _Action(
-      type: _ActionType.Watch,
-      streamController: streamController,
-      reference: reference,
-      transactionID: transactionID
-    );
-    _backbone.dispatchAction(action);
-    return streamController.stream;
-  }
-
+  @override
   Future<QuerySnapshot> query(String path, [Schema filterSchema]) {
     var reference = NodeReference.parse(path);
     var completer = Completer<QuerySnapshot>();
@@ -51,20 +39,7 @@ class _LocalOakDatabaseProvider extends OakProvider {
     return completer.future;
   }
 
-  Stream<QuerySnapshot> watchQuery(String path, [Schema filterSchema]) {
-    var reference = NodeReference.parse(path);
-    var streamController = StreamController<QuerySnapshot>();
-    var action = _Action(
-      type: _ActionType.WatchQuery,
-      streamController: streamController,
-      reference: reference,
-      filterSchema: filterSchema,
-      transactionID: transactionID
-    );
-    _backbone.dispatchAction(action);
-    return streamController.stream;
-  }
-
+  @override
   Future<void> set(String path, dynamic data) {
     var reference = NodeReference.parse(path);
     if (reference.isMultiPath) throw InvalidUseOfMultiPath(reference);
@@ -80,6 +55,7 @@ class _LocalOakDatabaseProvider extends OakProvider {
     return completer.future;
   }
   
+  @override
   Future<void> update(String path, dynamic data) {
     var reference = NodeReference.parse(path);
     if (reference.isMultiPath) throw InvalidUseOfMultiPath(reference);
@@ -103,6 +79,33 @@ class LocalOakDatabase extends _LocalOakDatabaseProvider implements OakDatabase 
   LocalOakDatabase.empty() : super(_Backbone());
   LocalOakDatabase.decode(Uint8List encodedDatabase) : super(_Backbone());
 
+  @override
+  Stream<NodeSnapshot> watch(String path) {
+    var reference = NodeReference.parse(path);
+    if (reference.isMultiPath) throw InvalidUseOfMultiPath(reference);
+    var streamController = StreamController<NodeSnapshot>();
+    var action = _Action(
+      type: _ActionType.Watch,
+      streamController: streamController,
+      reference: reference,
+    );
+    _backbone.dispatchAction(action);
+    return streamController.stream;
+  }
+
+  @override
+  Stream<QuerySnapshot> watchQuery(String path, [Schema filterSchema]) {
+    var reference = NodeReference.parse(path);
+    var streamController = StreamController<QuerySnapshot>();
+    var action = _Action(
+      type: _ActionType.WatchQuery,
+      streamController: streamController,
+      reference: reference,
+      filterSchema: filterSchema,
+    );
+    _backbone.dispatchAction(action);
+    return streamController.stream;
+  }
   
   Future<void> setDatabaseSchema(Map<String,Schema> classes, {TransactionHandler transitionTransactionHandler}) {
     var completer = Completer<void>();

@@ -2,31 +2,54 @@ part of 'local_base.dart';
 
 class _Backbone {
 
-  final StreamController<_Action> _actionQueueController = StreamController();
+  final StreamController<_Action> actionQueueController = StreamController();
+  final Map<String,StreamController<_Action>> transactionQueueController = {};
+  final Set<_Watch> watches = {};
+  final Set<_QueryWatch> queryWatches = {};
+  Map<String,Schema> classes;
+
+  Set<NodeReference> tmpUpdatedDocuments;
+  Set<NodeReference> tmpUpdatedCollections;
+  Set<NodeReference> tmpReplacedNodes;
+  _Node temporarilyReplacedRoot;
+
   _DBTree _tree;
 
   _Backbone() {
+    _tree = _DBTree(_DocumentNode(null, NodeReference.root, {}));
     _executeActionQueue();
   }
 
   void dispatchAction(_Action action) {
     if (action.transactionID==null) {
-      _actionQueueController.add(action);
+      actionQueueController.add(action);
     } else {
-      //TODO: add to transaction specific queue
+      if (transactionQueueController.containsKey(action.transactionID)) {
+        transactionQueueController[action.transactionID].add(action);
+      } else {
+        var err = DatabaseException('No open transaction with id "${action.transactionID}".');
+        action.completer?.completeError(err);
+        action.streamController?.addError(err);
+        action.streamController?.close();
+      }
     }
   }
 
-
   Future<void> _executeActionQueue() async {
-    await for (var action in _actionQueueController.stream) {
+    await for (var action in actionQueueController.stream) {
+      tmpUpdatedDocuments = {};
+      tmpUpdatedCollections = {};
+      tmpReplacedNodes = {};
+      temporarilyReplacedRoot = null;
+
+      bool isWriteAction=false;
+
       switch (action.type) {
-        
         case _ActionType.Get:
-          _executeGetAction(action);
+          _executeGet(action);
           break;
         case _ActionType.Watch:
-          // TODO: Handle this case.
+          _executeWatch(action);
           break;
         case _ActionType.Query:
           // TODO: Handle this case.
@@ -56,11 +79,35 @@ class _Backbone {
           // TODO: Handle this case.
           break;
       }
+
+      if (isWriteAction) {
+
+        bool violated
+
+      }
+
+
     }
   }
 
-  void _executeGetAction(_Action action) {
-    var node  = _tree.locateNode(action.reference);
+  /// rolls back replaced nodes to their position
+  void rollBack(_Node node) {
+    if (node.normalizedPath.isRootPath) {
+      _tree.root = temporarilyReplacedRoot;
+      temporarilyReplacedRoot=null;
+    } else {
+      
+    }
+  }
+
+  Set<_Node> query(NodeReference ref, Schema filter) {
+    var nodes = _tree.resolveMultiPath(ref);
+    nodes.retainWhere((element) => _tree.fitSchema(element, filter??DynamicSchema(), classes));
+    
+  }
+
+  void _executeGet(_Action action) {
+    var node = _tree.locateNode(action.reference);
     if (node==null) {
       action.completer.complete(NodeSnapshot.doesNotExist(action.reference));
     } else {
@@ -70,6 +117,42 @@ class _Backbone {
     }
   }
 
+  void _executeWatch(_Action action) {
+    var node_references = _tree.locateNodeAndReturnReferences(action.reference);
+    var node = node_references[0];
+    NodeSnapshot snap;
+    NodeReference normalizedTarget;
+    if (node==null) {
+      snap = NodeSnapshot.doesNotExist(action.reference);
+    } else {
+      var value = _tree.extractValue(node);
+      snap  = NodeSnapshot(action.reference, node.normalizedPath, node.type, value);
+      normalizedTarget=node.normalizedPath;
+    }
+    action.streamController.add(snap);
+    var watch = _Watch(action.reference, action.streamController);
+    watch.normalizedTarget=normalizedTarget;
+    watch.usedReferenceNodes=node_references[1];
+    watches.add(watch);
+  }
+
+}
+
+class _Watch {
+  final NodeReference requestReference;
+  final StreamController<NodeSnapshot> controller;
+  /// null if target does not exist
+  NodeReference normalizedTarget;
+  /// normalized paths to all references used
+  Set<NodeReference> usedReferenceNodes;
+  _Watch(this.requestReference,this.controller);
+}
+
+class _QueryWatch {
+  final NodeReference requestReference;
+  final Schema filterSchema;
+  Set<NodeReference> lastIncluded;
+  _QueryWatch(this.requestReference,this.filterSchema);
 }
 
 /*
@@ -88,7 +171,7 @@ Write algorithm:
   If a document or collection node is created/deleted/changed remove it
   from the updatedDocuments and updatedCollections lists and put it in modified list;
   before you replace the node, roll back all changes to the node and remove corresponding entries 
-  from modifiedNodes.
+  from modifiedNodes. (there should be no modified child of a modified node)
   The nodes with changed tempChildren parameter are prefixPaths of nodes listed in modified nodes.
 
 2) Check for schema violation, roll back if necessary

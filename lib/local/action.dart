@@ -28,7 +28,7 @@ class _Action {
   final TransactionHandler transactionHandler;
   /// required argument for [_ActionType.ReadBlob]
   final BlobReference blobReference;
-  /// required argument for get,watch,query,watchQuery,set,update
+  /// required argument for get,query,set,update
   /// May be null if action is executed outside a transaction
   final String transactionID;
   /// required for every action except [_ActionType.Watch],[_ActionType.WatchQuery]
