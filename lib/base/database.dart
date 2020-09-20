@@ -38,14 +38,11 @@ abstract class OakDatabase extends OakProvider {
   /// [transitionTransactionHandler] can be used as a transaction handler similarly
   /// to a transaction handler of [runTransaction]. During the transaction all type checks during writing
   /// to or updating of the database are ignored and only applied after the transaction has finished.
-  /// If [deleteViolatingNodes] is `true`, all nodes which violate the new database schematics
-  /// will be deleted. if [deleteViolatingNodes] is `true` and the root node had to be deleted or if [deleteViolatingNodes] is `false` and there exist some node
-  /// (after the transition transaction has finished) which (still) violates the new class
-  /// system, this function will fail, resolve with a [DatabaseSchemaViolationException]. The transaction will be rolled back
-  /// and the classes will not be changed, so that no changes to the database were made.
+  /// if the database violates the new class system after the transaction, this function will fail, resolve with a [DatabaseSchemaViolationException]
+  /// and all changes will be rolled back.
   /// 
   /// The future may resolve with a [DatabaseException].
-  Future<void> setDatabaseSchema(Map<String,Schema> classes, {TransactionHandler transitionTransactionHandler, bool deleteViolatingNodes=false});
+  Future<void> setDatabaseSchema(Map<String,Schema> classes, {TransactionHandler transitionTransactionHandler});
 
   /// Reads the predefined classes and the database schema from the database.
   /// 
@@ -64,6 +61,11 @@ abstract class OakDatabase extends OakProvider {
   /// The [transactionHandler] is given an [OakProvider] which can be used 
   /// to modify the database. The database is not modified in any way other
   /// then by the [transactionHandler] during its execution.
+  /// 
+  /// During the transaction all type checks during writing
+  /// to or updating of the database are ignored and only applied after the transaction has finished.
+  /// if the database schema is violated after the transaction, this function will fail, resolve with a [DatabaseSchemaViolationException]
+  /// and all changes will be rolled back.
   /// 
   /// If one of the database actions executed by the [transactionHandler]
   /// using the provided [OakProvider] fails, all previous changes to the

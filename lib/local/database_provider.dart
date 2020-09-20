@@ -104,15 +104,13 @@ class LocalOakDatabase extends _LocalOakDatabaseProvider implements OakDatabase 
   LocalOakDatabase.decode(Uint8List encodedDatabase) : super(_Backbone());
 
   
-  Future<void> setDatabaseSchema(Map<String,Schema> classes, {TransactionHandler transitionTransactionHandler, bool deleteViolatingNodes=false}) {
+  Future<void> setDatabaseSchema(Map<String,Schema> classes, {TransactionHandler transitionTransactionHandler}) {
     var completer = Completer<void>();
     classes = Map<String,Schema>.unmodifiable(classes??{});
-    deleteViolatingNodes??=false;
     var action = _Action(
       type: _ActionType.SetDatabaseSchema,
       completer: completer,
       classes: classes,
-      deleteViolatingNodes: deleteViolatingNodes,
       transactionHandler: transitionTransactionHandler
     );
     _backbone.dispatchAction(action);

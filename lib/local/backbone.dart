@@ -111,9 +111,12 @@ For every query watch snapshot save
  */
 
 
-/// A person can only be friends with another person if they have one hobby in common
-/// and if a person A is married to person b, so must person b be married to person a.
-var personClass =  VariableContext(AndSchema([
+
+
+
+/// A person A can only consider person B a friend, if they have one hobby in common.
+/// and if a person A is married to person B, so must person B be married to person A.
+var personClass =  AndSchema([
   NodeVariable("spouse"),
   PathSchema(NodeReference.parse('/persons/~')),
   DocumentSchema(
@@ -154,6 +157,7 @@ var personClass =  VariableContext(AndSchema([
       ))
     }
   )
-]));
+]);
+
 
 

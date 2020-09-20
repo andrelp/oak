@@ -6,7 +6,7 @@ abstract class Expression {
   Map<String,bool> findSolution(Iterable<String> variables) {
     var vars = List<String>.from(variables);
     var i = List<bool>.generate(variables.length+1, (index) => false);
-
+    //count binary
     void increment() {
       int index;
       for (index=0; i[index]; index++) {
@@ -24,6 +24,7 @@ abstract class Expression {
     return null;
   }
 }
+
 
 class VariableNoValueError extends Error {
   final String name;
@@ -84,6 +85,18 @@ class _Xor extends Expression {
   }
 }
 
+class _Iff extends Expression {
+  Expression a;
+  Expression b;
+  _Iff(this.a,this.b);
+  @override
+  bool evaluate(Map<String, bool> varValues) {
+    var va = a.evaluate(varValues);
+    var vb = b.evaluate(varValues);
+    return (va&&vb)||(!va&&!vb);
+  }
+}
+
 class Value extends Expression {
   final bool value;
   Value(bool value) : this.value = value??false;
@@ -118,6 +131,22 @@ Expression xor(List<Expression> children) {
   }
   if (!foundAlwaysTrue && children.every((e) => e is Value && !e.value)) return Value(false);
   return _Xor(children);
+}
+
+Expression ifThen(Expression a, Expression b) {
+  return or([not(a),b]);
+}
+
+Expression iff(Expression a, Expression b) {
+  if (a is Value) {
+    if (a.value) return b;
+    return not(b);
+  }
+  if (b is Value) {
+    if (b.value) return a;
+    return not(a);
+  }
+  return _Iff(a, b);
 }
 
 

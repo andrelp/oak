@@ -23,8 +23,6 @@ class _Action {
   final dynamic data;
   /// required argument for [_ActionType.SetDatabaseSchema]
   final Map<String,Schema> classes;
-  /// required argument for [_ActionType.SetDatabaseSchema]
-  final bool deleteViolatingNodes;
   /// optional argument for [_ActionType.SetDatabaseSchema]
   /// and required argument for [_ActionType.Transaction]
   final TransactionHandler transactionHandler;
@@ -37,6 +35,6 @@ class _Action {
   final Completer completer;
   /// required for [_ActionType.Watch],[_ActionType.WatchQuery]
   final StreamController streamController;
-  const _Action({this.type,this.reference,this.filterSchema,this.data,this.classes,this.deleteViolatingNodes,this.blobReference,this.completer,this.transactionHandler,this.transactionID,this.streamController});
+  const _Action({this.type,this.reference,this.filterSchema,this.data,this.classes,this.blobReference,this.completer,this.transactionHandler,this.transactionID,this.streamController});
 }
 

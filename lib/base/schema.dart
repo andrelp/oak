@@ -23,13 +23,15 @@ class StringSchema extends Schema {
   final bool mayBeEmpty;
   /// the whole string must match the regular expression [regularExpression]
   final RegExp regularExpression;
+  /// the string must have one match with the regular expression [regularExpression]
+  final RegExp hasMatch;
   /// the string must contain at least [minLength] characters
   final int minLength;
   /// the length of the string must not exceed [maxLength]
   final int maxLength;
   
 
-  StringSchema({this.isEqualTo,this.mayBeEmpty=true,this.regularExpression,this.minLength,this.maxLength}) : super._();
+  StringSchema({this.isEqualTo,this.hasMatch,this.mayBeEmpty=true,this.regularExpression,this.minLength,this.maxLength}) : super._();
 }
 
 /// Node must be of primitive type int.
@@ -101,14 +103,10 @@ class ListSchema extends Schema {
 class MapSchema extends Schema {
   /// each value of the map must follow the given schema by [schema] to their associated keys.
   final Map<String,Schema> schema;
-  /// if [noOtherKeys] is `true`, map may not contain keys which are not listed in [schema].
-  final bool noOtherKeys;
-  /// if [noLessKeys] is `true`, map must contain at least all keys which are listed in [schema]. This excludes values with a `NullableSchema`s.
-  final bool noLessKeys;
   /// if [mustMatchKeysExactly] is `true`, map must contain exactly those keys specified in [schema] and no more and no less. This excludes values with a `NullableSchema`s.
   final bool mustMatchKeysExactly;
 
-  MapSchema({this.schema=const <String,Schema>{},this.noOtherKeys=false,this.noLessKeys=false,this.mustMatchKeysExactly=false}) : super._();
+  MapSchema({this.schema=const <String,Schema>{},this.mustMatchKeysExactly=false}) : super._();
 }
 
 //##################################
@@ -179,19 +177,18 @@ class ClassSchema extends Schema {
 //#                                #
 //##################################
 
-class VariableContext extends Schema {
-  final Schema child;
-  VariableContext(this.child) : super._();
-}
-
 class ValueVariable extends Schema {
   final String name;
-  ValueVariable(this.name) : super._();
+  ValueVariable(this.name) : super._() {
+    if (name==null) throw NullThrownError();
+  }
 }
 
 class NodeVariable extends Schema {
   final String name;
-  NodeVariable(this.name) : super._();
+  NodeVariable(this.name) : super._() {
+    if (name==null) throw NullThrownError();
+  }
 }
 
 //##################################
@@ -201,33 +198,29 @@ class NodeVariable extends Schema {
 //##################################
 
 /// Node value must follow each schema given by [schemata].
+/// if list [schemata] is empty or `null` it will always except a node
 class AndSchema extends Schema {
   final List<Schema> schemata;
-  AndSchema(this.schemata) : super._() {
-    if (schemata==null) throw NullThrownError();
-  }
+  AndSchema(this.schemata) : super._();
 }
 
 /// Node must follow at least one schema given by [schemata].
+/// if list [schemata] is empty or `null` it will never except a node
 class OrSchema extends Schema {
   final List<Schema> schemata;
-  OrSchema(this.schemata) : super._() {
-    if (schemata==null) throw NullThrownError();
-  }
+  OrSchema(this.schemata) : super._();
 }
 
 /// Node may not follow schema [schema].
+/// if [schena] is `null` it will never except a node
 class NotSchema extends Schema {
   final Schema schema;
-  NotSchema(this.schema) : super._() {
-    if (schema==null) throw NullThrownError();
-  }
+  NotSchema(this.schema) : super._();
 }
 
 /// Node must follow exactly one of the schemata given by [schemata].
+/// if list [schemata] is empty or `null` it will never except a node
 class XorSchema extends Schema {
   final List<Schema> schemata;
-  XorSchema(this.schemata) : super._() {
-    if (schemata==null) throw NullThrownError();
-  }
+  XorSchema(this.schemata) : super._();
 }

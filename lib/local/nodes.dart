@@ -4,12 +4,16 @@ part of 'local_base.dart';
 abstract class _Node {
   /// parent of current node. If this is the root node [parentNode] is `null`.
   final _BranchNode parentNode;
-  /// normalized path of this node. Always ends on '/'
   /// If the node is a child of a list, its [normalizedPath] is `null`
   final NodeReference normalizedPath;
   /// get the [NodeType] of this node
   NodeType get type;
   _Node(this.parentNode,this.normalizedPath);
+
+  @override
+  bool operator==(dynamic other) => other is _Node && other.normalizedPath==normalizedPath;
+  @override
+  int get hashCode => normalizedPath.hashCode;
 }
 
 /// leaf node which holds data. Allowed types include String,int,double,bool,NodeReference and BlobReference
@@ -46,6 +50,7 @@ abstract class _NamedBranchNode extends _BranchNode {
   Map<String,_Node> children;
   /// [children] is set to [actionChildren] when a action was completed successfully
   Map<String,_Node> actionChildren;
+
   _NamedBranchNode(_BranchNode parentNode,NodeReference normalizedPath,this.children) : super(parentNode,normalizedPath);
 }
 

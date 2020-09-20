@@ -8,6 +8,7 @@ class _DBTree {
 
   /// Returns the node at reference. Returns null if the node does not exist
   _Node locateNode(NodeReference reference) {
+    if (reference.isMultiPath) throw InvalidUseOfMultiPath(reference);
     // used to determine whether a reference points to one of its children
     var usedReferenceNodes = <String>{};
     
@@ -38,8 +39,6 @@ class _DBTree {
       }
       return current;
     };
-
-    if (reference.isMultiPath) throw InvalidUseOfMultiPath(reference);
     
     return locate(reference);
   }
@@ -95,4 +94,323 @@ class _DBTree {
     return extract(node,false);
   }
 
+  /// Returns the set of all nodes included in the given (multi-path)
+  Set<_Node> resolveMultiPath(NodeReference reference) {
+    // Wrong implementation: forget to use references (soo locate function)
+    return null;
+    /*Set<_Node> combine(Set<_Node> a, Set<_Node> b)
+      => <_Node>{}..addAll(a)..addAll(b);
+    if (reference.isMultiPath)
+      return reference.compositePathComponents.map((cpc) => resolveMultiPath(cpc)).fold<Set<_Node>>(<_Node>{}, combine);
+    if (reference.isRootPath) return <_Node>{root};
+    final parentSet = resolveMultiPath(reference.prefixPath);
+    return parentSet.map<Set<_Node>>((node) {
+      if (reference.lastPathComponent=='..') return <_Node>{node.parentNode};
+      if (reference.lastPathComponent=='.') return <_Node>{node};
+      if (reference.lastPathComponent=='~') {
+        if (node is _NamedBranchNode) return <_Node>{}..addAll((node.actionChildren??node.children).values);
+        return <_Node>{};
+      }
+      if (node is _NamedBranchNode) return <_Node>{(node.actionChildren??node.children)[reference.lastPathComponent]};
+      return <_Node>{};
+    }).fold<Set<_Node>>(<_Node>{}, combine)..removeWhere((e) => e==null);*/
+    
+  }
+
+  /*
+
+  Check for schema violation a such: Start with node class combination '/', 'Root'.
+  1) for every node,class combination that comes up define variables E(path A,class B), meaning: node at path A satisfies the class B.
+  2) Create variables Var(path A,class B,path C,String varName): while checking node at path A for class B a Value variable by the name varName is in class B.
+    Var(...) is a variable if true, meaning that node at path C is in the group of nodes which values must be equal to one another
+  3) Analogous create NodeVar(...)
+  4) create for any pairing {A,B} of Var(...) that come up, the formula A∧B⇒C where C is either true or false (given the structure of the tree)
+  5) Analogous create for every pairing of NodeVar(...) these clauses.
+  6) create for every node,class comb that comes up: E(...) ⇔ X, where X is some clause depending on set of all Var(...),NodeVar(...) and E(...)
+  7) combine clauses to Z(node,class) = ( ⋀(VarA∧VarB⇒VarC) ∧ ⋀(NodeA∧NodeB⇒NodeC) ∧ E(...) ⇔ X )
+  8) for every E(...) variable that comes up recursively redo steps 1 through 8.
+  9) Combine them Schema = ⋀Z(node,class)
+  10) If Schema is solvable then hurray
+
+  */
+
+  bool fitSchema(_Node node, Schema schema, Map<String, Schema> classes) {
+    
+    // unused class name to assign [schema] a class name
+    final rootClassName = classes.keys.fold<String>('', (p,e) => (e.length>p.length)?e:p) + '_';
+    
+    Schema getClass(String name) {
+      if (name==rootClassName) return schema;
+      return classes[name] ?? DynamicSchema();
+    }
+
+    final open = <_NodeClassPair>{_NodeClassPair(node, rootClassName)};
+    final handled = <String>{};
+    final clauses = <l.Expression>[];
+    final usedVariables = <String>[]; 
+
+    while (open.isNotEmpty) {
+      final pair = open.first;
+      open.remove(pair);
+      if (handled.contains(pair.expressionVariableName)) continue;
+      handled.add(pair.expressionVariableName);
+      final schema   = getClass(pair.schemaClass);
+      final node     = pair.node;
+      final valVars  = <_ValueVariable>{};
+      final nodeVars = <_NodeVariable>{};
+      usedVariables.add(pair.expressionVariableName);
+
+      l.Value $(bool v) => l.Value(v);
+      
+      l.Expression applySchema(_Node n, Schema s) {
+        if (n==null && !(s is NullableSchema)) return l.Value(false);
+        
+        if (s is StringSchema) {
+          if (n is _LeafNode<String>) {
+            final v = (s.isEqualTo==null||n.value==s.isEqualTo)
+            && (s.maxLength==null||n.value.length<=s.maxLength)
+            && (s.minLength==null||n.value.length>=s.minLength)
+            && !(s.mayBeEmpty==false&&n.value.isEmpty)
+            && (s.regularExpression==null||s.regularExpression.stringMatch(n.value)==n.value)
+            && (s.hasMatch==null||s.hasMatch.hasMatch(n.value));
+            return $(v);
+          }
+          return $(false);
+        }
+
+        if (s is IntSchema) {
+          if (n is _LeafNode<int>) {
+            final v = (s.isEqualTo==null||n.value==s.isEqualTo)
+            && (s.min==null||n.value>=s.min)
+            && (s.max==null||n.value>=s.max);
+            return $(v);
+          }
+          return $(false);
+        }
+
+        if (s is DoubleSchema) {
+          if (n is _LeafNode<double>) {
+            final v = (s.isEqualTo==null||n.value==s.isEqualTo)
+            && (s.min==null||n.value>=s.min)
+            && (s.max==null||n.value>=s.max);
+            return $(v);
+          }
+          return $(false);
+        }
+
+        if (s is BoolSchema) {
+          if (n is _LeafNode<bool>) {
+            final v = (s.isEqualTo==null||n.value==s.isEqualTo);
+            return $(v);
+          }
+          return $(false);
+        }
+
+        if (s is ReferenceSchema) {
+          if (n is _LeafNode<NodeReference>) {
+            if (s.referentSchema==null) return $(true);
+            final target = locateNode(n.value);
+            return applySchema(target, s.referentSchema);
+          }
+          return $(false);
+        }
+
+        if (s is BlobReferenceSchema) {
+          return $(n is _LeafNode<BlobReference>);
+        }
+
+        if (s is ListSchema) {
+          if (n is _ListNode) {
+            children(Schema param) => (n.actionChildren??n.children).map((c) => applySchema(c, param));
+            return l.and([
+              if (s.every!=null)
+                ...children(s.every),
+              if (s.any!=null)
+                l.or(children(s.any).toList(growable: false)),
+              if (s.one!=null)
+                l.xor(children(s.one).toList(growable: false))
+            ]);
+          }
+          return $(false);
+        }
+
+        if (s is MapSchema) {
+          if (n is _MapNode) {
+            var nodeChildren   = n.actionChildren??n.children;
+            var schemaChildren = s.schema??<String,Schema>{};
+            if (s.mustMatchKeysExactly) {
+              if (nodeChildren.keys.any((e) => !schemaChildren.containsKey(e))) return $(false);
+              if (schemaChildren.keys.any((e) => !nodeChildren.containsKey(e))) return $(false);
+            }
+            return l.and(
+              schemaChildren.entries.map((e) => applySchema(nodeChildren[e.key],e.value)).toList()
+            );
+          }
+          return $(false);
+        }
+
+        if (s is DocumentSchema) {
+          if (n is _DocumentNode) {
+            var nodeChildren   = n.actionChildren??n.children;
+            var schemaChildren = s.schema??<String,Schema>{};
+            if (s.mustMatchFieldsExactly) {
+              if (nodeChildren.keys.any((e) => !schemaChildren.containsKey(e))) return $(false);
+              if (schemaChildren.keys.any((e) => !nodeChildren.containsKey(e))) return $(false);
+            }
+            return l.and(
+              schemaChildren.entries.map((e) => applySchema(nodeChildren[e.key],e.value)).toList()
+            );
+          }
+          return $(false);
+        }
+
+        if (s is CollectionSchema) {
+          if (n is _CollectionNode) {
+            if (s.childSchema==null) return $(true);
+            var nodeChildren = n.actionChildren??n.children;
+            return l.and(
+              nodeChildren.values.map((e) => applySchema(e, s.childSchema)).toList()
+            );
+          }
+          return $(false);
+        }
+
+        if (s is NullableSchema) {
+          // s==null case handled at beginning
+          if (s.childSchema==null) return $(true);
+          return applySchema(n, s.childSchema);
+        }
+
+        if (s is DynamicSchema) {
+          // s==null case handled at beginning
+          return $(true);
+        }
+
+        if (s is PathSchema) {
+          if (s.path==null) return $(true);
+          return $(resolveMultiPath(s.path).contains(n));
+        }
+
+        if (s is ClassSchema) {
+          if (s.name==null) return $(true);
+          final pair = _NodeClassPair(n, s.name);
+          open.add(pair);
+        }
+
+        if (s is ValueVariable) {
+          var vv = _ValueVariable(pair, n, s.name);
+          valVars.add(vv);
+          return vv.expressionVariable;
+        }
+
+        if (s is NodeVariable) {
+          var nv = _NodeVariable(pair, n, s.name);
+          nodeVars.add(nv);
+          return nv.expressionVariable;
+        }
+        
+        if (s is AndSchema) {
+          return l.and((s.schemata??<Schema>[]).map((child) => applySchema(n, child)).toList());
+        }
+
+        if (s is OrSchema) {
+          return l.or((s.schemata??<Schema>[]).map((child) => applySchema(n, child)).toList());
+        }
+
+        if (s is NotSchema) {
+          if (s.schema==null) return $(false);
+          return l.not(applySchema(n, s.schema));
+        }
+
+        if (s is XorSchema) {
+          return l.xor((s.schemata??<Schema>[]).map((child) => applySchema(n, child)).toList());
+        }
+
+        // programming error, didn't cover a schema. Should never reach that state
+        assert(false);
+        return null;
+      }
+
+      final valVarsL  = valVars.toList(growable: false);
+      final nodeVarsL = nodeVars.toList(growable: false);
+      final boundaryConditions = <l.Expression>[];
+
+      // Add boundary conditions: if both node a and node b are assigned to the
+      // same schema variable, they must hold the same data
+      for (var i = 0; i < valVarsL.length; i++) {
+        final a = valVarsL[i];
+        usedVariables.add(a.expressionVariableName);
+        for (var j = i+1; j < valVarsL.length; j++) {
+          final b = valVarsL[j];
+          final val = l.Value(a.target.value==b.target.value);
+          boundaryConditions.add(l.ifThen(l.and([a.expressionVariable,b.expressionVariable]), val));
+        }
+      }
+
+      // Add boundary conditions: if both node a and node b are assigned to the
+      // same schema variable, they must hold the same data
+      for (var i = 0; i < nodeVarsL.length; i++) {
+        final a = nodeVarsL[i];
+        usedVariables.add(a.expressionVariableName);
+        for (var j = i+1; j < nodeVarsL.length; j++) {
+          final b = nodeVarsL[j];
+          final val = l.Value(a.target.normalizedPath==b.target.normalizedPath);
+          boundaryConditions.add(l.ifThen(l.and([a.expressionVariable,b.expressionVariable]), val));
+        }
+      }
+
+      // create clause for this node and class pair and add to all clauses
+      var clause = l.and([
+        l.iff(pair.expressionVariable, applySchema(node, schema)),
+        ...boundaryConditions
+      ]);
+
+      clauses.add(clause);
+    }
+
+    // if this combined expression is true, the node fits the schema 
+    final schemaExpression = l.and(clauses);
+    return schemaExpression.findSolution(usedVariables)!=null;
+  }
+
+}
+
+
+class _NodeClassPair {
+  final _Node node;
+  final String schemaClass;
+  final String expressionVariableName;
+  l.Variable get expressionVariable => l.Variable(expressionVariableName);
+  _NodeClassPair(this.node,this.schemaClass) : expressionVariableName=node.normalizedPath.path+':#:'+schemaClass;
+  @override
+  bool operator==(dynamic other) => other is _NodeClassPair && other.expressionVariableName==expressionVariableName;
+  @override
+  int get hashCode => expressionVariableName.hashCode;
+}
+
+class _ValueVariable {
+  final String variableName;
+  final _LeafNode target;
+  final String expressionVariableName;
+  l.Variable get expressionVariable => l.Variable(expressionVariableName);
+  _ValueVariable(_NodeClassPair context,this.target,this.variableName) : expressionVariableName='var:#:'+context.expressionVariableName+':#:'+target.normalizedPath.path+':#:'+variableName;
+
+  @override
+  bool operator==(dynamic other) => other is _ValueVariable && other.expressionVariableName==expressionVariableName;
+  @override
+  int get hashCode => expressionVariableName.hashCode;
+}
+
+
+class _NodeVariable {
+  final String variableName;
+  final _Node target;
+  final String expressionVariableName;
+  l.Variable get expressionVariable => l.Variable(expressionVariableName);
+  _NodeVariable(_NodeClassPair context,this.target,this.variableName) : expressionVariableName='var:#:'+context.expressionVariableName+':#:'+target.normalizedPath.path+':#:'+variableName;
+
+  @override
+  bool operator==(dynamic other) => other is _NodeVariable && other.expressionVariableName==expressionVariableName;
+  @override
+  int get hashCode => expressionVariableName.hashCode;
 }
