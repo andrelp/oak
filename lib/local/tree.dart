@@ -6,9 +6,9 @@ class _DBTree {
 
   _DBTree(this.root);
 
-  /// first element of the list is located node or `null` if not found,
-  /// second element is set of all used references to find the node
-  List locateNodeAndReturnReferences(NodeReference reference) {
+  
+  /// Returns the node at reference. Returns null if the node does not exist
+  _Node locateNode(NodeReference reference) {
     if (reference.isMultiPath) throw InvalidUseOfMultiPath(reference);
     // used to determine whether a reference points to one of its children
     var usedReferenceNodes = <String>{};
@@ -41,12 +41,7 @@ class _DBTree {
       return current;
     };
     
-    return [locate(reference),usedReferenceNodes];
-  }
-
-  /// Returns the node at reference. Returns null if the node does not exist
-  _Node locateNode(NodeReference reference) {
-    return locateNodeAndReturnReferences(reference)[0];
+    return locate(reference);
   }
 
   /// Locates the parent node of the node at [reference].
@@ -72,6 +67,8 @@ class _DBTree {
     }
   }*/
 
+  /// extracts the value of a tree node for a snap
+  /// It will return the temporary assigned data in a transaction
   dynamic extractValue(_Node node) {
     if (node==null) throw NullThrownError();
 
@@ -79,16 +76,16 @@ class _DBTree {
       if (node is _LeafNode) return node.value;
       if (node is _CollectionNode) {
         if (nested) return CollectionChildPlaceholder(node.normalizedPath);
-        return node.children.keys.toList();
+        return (node.actionChildren??node.children).keys.toList();
       }
       if (node is _ListNode) {
-        return node.children.map((n) => extract(n)).toList();
+        return (node.actionChildren??node.children).map((n) => extract(n)).toList();
       }
       if (node is _DocumentNode && nested) {
         return DocumentChildPlaceholder(node.normalizedPath);
       }
       if (node is _MapNode || node is _DocumentNode) {
-        return (node as _NamedBranchNode).children.map<String,dynamic>(
+        return ((node as _NamedBranchNode).actionChildren??(node as _NamedBranchNode).children).map<String,dynamic>(
           (key,child) => MapEntry(key, extract(child))
         );
       }
@@ -141,10 +138,29 @@ class _DBTree {
   }
 
   
+  _Node findYoungestDocumentAncestor(_Node node) {
+    _Node find(_Node n) {
+      if (n is _DocumentNode) return n;
+      return find(n.parentNode);
+    }
+    if (node?.parentNode==null) return null;
+    return find(node.parentNode);
+  }
+
+  /// returns `null` if no such collection exist.
+  _Node findYoungestCollectionAncestor(_Node node) {
+    _Node find(_Node n) {
+      if (n is _CollectionNode) return n;
+      if (n.parentNode==null) return null;
+      return find(n.parentNode);
+    }
+    if (node?.parentNode==null) return null;
+    return find(node.parentNode);
+  }
 
   bool fitSchema(_Node node, Schema schema, Map<String, Schema> classes) {
     /*
-    Check fot schema violation: Create a class A for the schema given and start with this node class combination:
+    Check fot schema violation: Create a temporary class for the schema given and start with this node class combination:
     1) for every node,class combination that comes up, define variables E(path A,class B), meaning: node at path A satisfies the class B.
     2) Create variables Var(path A,class B,path C,String varName): while checking node at path A for class B a Value variable by the name varName is in class B.
       Var(...) is a variable if true, meaning that node at path C is in the group of nodes which values must be equal to one another
@@ -159,7 +175,7 @@ class _DBTree {
     */
     
     // unused class name to assign [schema] a class name
-    final rootClassName = classes.keys.fold<String>('', (p,e) => (e.length>p.length)?e:p) + '_';
+    final rootClassName = classes.keys.fold<String>('', (p,e) => (e.length>p.length)?e:p) + 'tempClass';
     
     Schema getClass(String name) {
       if (name==rootClassName) return schema;
@@ -176,8 +192,8 @@ class _DBTree {
       open.remove(pair);
       if (handled.contains(pair.expressionVariableName)) continue;
       handled.add(pair.expressionVariableName);
-      final schema   = getClass(pair.schemaClass);
-      final node     = pair.node;
+      final pSchema   = getClass(pair.schemaClass);
+      final pNode     = pair.node;
       final valVars  = <_ValueVariable>{};
       final nodeVars = <_NodeVariable>{};
       usedVariables.add(pair.expressionVariableName);
@@ -370,7 +386,7 @@ class _DBTree {
       }
 
       // Add boundary conditions: if both node a and node b are assigned to the
-      // same schema variable, they must hold the same data
+      // same schema variable, they must be the same node
       for (var i = 0; i < nodeVarsL.length; i++) {
         final a = nodeVarsL[i];
         usedVariables.add(a.expressionVariableName);
@@ -383,7 +399,7 @@ class _DBTree {
 
       // create clause for this node and class pair and add to all clauses
       final clause = l.and([
-        l.iff(pair.expressionVariable, applySchema(node, schema)),
+        l.iff(pair.expressionVariable, applySchema(pNode, pSchema)),
         ...boundaryConditions
       ]);
 

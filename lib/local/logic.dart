@@ -5,9 +5,9 @@ abstract class Expression {
 
   Map<String,bool> findSolution(Iterable<String> variables) {
     var vars = List<String>.from(variables);
-    var i = List<bool>.generate(variables.length+1, (index) => false);
+    var init = ()=>List<bool>.generate(variables.length+1, (index) => false);
     //count binary
-    void increment() {
+    void increment(List<bool> i) {
       int index;
       for (index=0; i[index]; index++) {
         i[index]=false;
@@ -16,7 +16,7 @@ abstract class Expression {
       i[index]=true;
     }
 
-    for (; !i.last; increment()) {
+    for (var i = init(); !i.last; increment(i)) {
       var varValues = Map<String,bool>.fromIterables(vars, i);
       if (evaluate(varValues)) return varValues;
     }

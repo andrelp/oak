@@ -38,6 +38,15 @@ class NodeReference {
   @override
   int get hashCode => path.hashCode;
 
+  /// Is this path a prefix of path [path]?
+  /// it will return `false` if one or both paths are composed paths
+  bool isPrefixPathOf(NodeReference path) {
+    if (isCompositePath||path.isCompositePath) return false;
+    if (path==this) return true;
+    if (path.prefixPath==null) return false;
+    return path.prefixPath.isPrefixPathOf(path);
+  }
+
   /// parses any path, which may be relative to this.
   /// If path is absolute (i.e. starts with '/'), it returns same as [NodeReference.parse]
   /// if the path is relative to this reference (i.e. does not start with '/')

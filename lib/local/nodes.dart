@@ -49,6 +49,8 @@ abstract class _NamedBranchNode extends _BranchNode {
   /// fields of the node or the map
   Map<String,_Node> children;
   /// [children] is set to [actionChildren] when a action was completed successfully
+  /// If a direct child node of this node is added/removed/replaced, [actionChildren] will be a copy of
+  /// [children] with the exception of the new/deleted/replaced document (and subsequent updates on the children)
   Map<String,_Node> actionChildren;
 
   _NamedBranchNode(_BranchNode parentNode,NodeReference normalizedPath,this.children) : super(parentNode,normalizedPath);
@@ -78,6 +80,8 @@ class _ListNode extends _BranchNode {
   /// elements of the list
   List<_LeafNode> children;
   /// [children] is set to [actionChildren] when a action was completed successfully
+  /// If a direct child node of this node is added/removed/replaced, [actionChildren] will be a copy of
+  /// [children] with the exception of the new/deleted/replaced document (and subsequent updates on the children)
   List<_LeafNode> actionChildren;
   _ListNode(_BranchNode parentNode, this.children) : super(parentNode,null);
 }

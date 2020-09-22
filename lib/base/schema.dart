@@ -6,6 +6,12 @@ part of 'oak_base.dart';
 /// It may also be used as parameter for querying the database.
 abstract class Schema {
   const Schema._();
+
+  String encode();
+
+  static Schema decode(String input) {
+    return null; //use jsondecode with ...
+  }
 }
 
 

@@ -6,17 +6,25 @@ class _Backbone {
   final Map<String,StreamController<_Action>> transactionQueueController = {};
   final Set<_Watch> watches = {};
   final Set<_QueryWatch> queryWatches = {};
-  Map<String,Schema> classes;
-
-  Set<NodeReference> tmpUpdatedDocuments;
-  Set<NodeReference> tmpUpdatedCollections;
-  Set<NodeReference> tmpReplacedNodes;
-  _Node temporarilyReplacedRoot;
+  
+  Set<_Node> tmpReplacedNodes; // set of all nodes which where replaced in the tree. Should always be prefix free. roll back changed to children if necessary
+  Map<String,Set<_LeafNode<BlobReference>>> tmpBlobReferences; //copy of blobReferences with applied actions
+  Map<String,Uint8List> tmpBlobs; // contains only temp changes and new temp blobs.
 
   _DBTree _tree;
+  Map<String,Schema> classes;
+  Map<String,Uint8List> blobs;
+  Map<String,Set<_LeafNode<BlobReference>>> blobReferences;
+  
 
   _Backbone() {
     _tree = _DBTree(_DocumentNode(null, NodeReference.root, {}));
+
+    //set all variables indicate changes in the database tree
+    tmpReplacedNodes = {};
+    tmpBlobReferences = blobReferences.map((key, value) => MapEntry(key,Set<_LeafNode<BlobReference>>.of(value))); //makes copy
+    tmpBlobs = {};
+
     _executeActionQueue();
   }
 
@@ -37,11 +45,7 @@ class _Backbone {
 
   Future<void> _executeActionQueue() async {
     await for (var action in actionQueueController.stream) {
-      tmpUpdatedDocuments = {};
-      tmpUpdatedCollections = {};
-      tmpReplacedNodes = {};
-      temporarilyReplacedRoot = null;
-
+      
       bool isWriteAction=false;
 
       switch (action.type) {
@@ -52,37 +56,122 @@ class _Backbone {
           _executeWatch(action);
           break;
         case _ActionType.Query:
-          // TODO: Handle this case.
+          _executeQuery(action);
           break;
         case _ActionType.WatchQuery:
-          // TODO: Handle this case.
+          _executeQueryWatch(action);
           break;
         case _ActionType.Set:
           // TODO: Handle this case.
+          isWriteAction=true;
           break;
         case _ActionType.Update:
           // TODO: Handle this case.
+          isWriteAction=true;
           break;
         case _ActionType.Transaction:
           // TODO: Handle this case.
+          isWriteAction=true;
           break;
         case _ActionType.GetDatabaseSchema:
-          // TODO: Handle this case.
+          _executeGetDatabaseSchema(action);
           break;
         case _ActionType.SetDatabaseSchema:
           // TODO: Handle this case.
+          isWriteAction=true;
           break;
         case _ActionType.EncodeDatabase:
           // TODO: Handle this case.
           break;
         case _ActionType.ReadBlob:
-          // TODO: Handle this case.
+          _executeReadBlob(action);
           break;
       }
 
       if (isWriteAction) {
+        var classSystem = action.classes??classes;
+        if (classes.containsKey('Root') && !_tree.fitSchema(_tree.root, classSystem['Root'], classSystem)) {
+          
+          
 
-        bool violated
+        } else {
+          // integrate blob changes:
+          blobReferences=tmpBlobReferences;
+          blobReferences.removeWhere((ref,nodes) => nodes==null||nodes.isEmpty);
+          tmpBlobs.forEach((ref, data) {
+            blobs[ref]=data;
+          });
+          blobs.removeWhere((ref,_) => !blobReferences.containsKey(ref));
+
+          // integrate new class system
+          if (action.classes!=null) classes=action.classes;
+
+          // integrate changes to the nodes
+          var parents = tmpReplacedNodes.map((n) => n.parentNode).toSet()..remove(null);
+          parents.forEach((n) {
+            if (n is _NamedBranchNode) {
+              n.children=n.actionChildren;
+            } else if (n is _ListNode) {
+              n.children=n.actionChildren;
+            } else {
+              assert(false);
+            }
+          });
+          
+          var parentDocs = tmpReplacedNodes.map((n) => _tree.findYoungestDocumentAncestor(n)).toSet()..remove(null);
+          var parentCols = tmpReplacedNodes.map((n) => _tree.findYoungestCollectionAncestor(n)).toSet()..remove(null);
+
+          // alarm watches
+
+          watches.forEach((watch) {
+            if (watch.controller.isClosed) {
+              watches.remove(watch);
+            } else {
+              var node = _tree.locateNode(watch.requestReference);
+              if  (node?.normalizedPath!=watch.normalizedTarget || ((watch.normalizedTarget!=null) &&
+                 ((watch.normalizedTarget!=null&&tmpReplacedNodes.any((repl) => repl.normalizedPath.isPrefixPathOf(watch.normalizedTarget)))
+                ||(parentDocs.any((doc) => doc.normalizedPath==watch.normalizedTarget))
+                ||(parentCols.any((col) => col.normalizedPath==watch.normalizedTarget))))) {
+                watch.normalizedTarget=node?.normalizedPath;
+                var value = node==null?null:_tree.extractValue(node);
+                var snap  = NodeSnapshot(watch.requestReference, node?.normalizedPath, node?.type, value);
+                watch.controller.add(snap);
+              }
+            }
+          });
+          
+          queryWatches.forEach((watch) {
+            if (watch.controller.isClosed) {
+              queryWatches.remove(watch);
+            } else {
+              var nodes = _tree.resolveMultiPath(watch.requestReference);
+              nodes.retainWhere((element) => _tree.fitSchema(element, watch.filterSchema??DynamicSchema(), classes));
+              var snapshots = List<NodeSnapshot>.unmodifiable(nodes.map((n) => NodeSnapshot(watch.requestReference, n.normalizedPath, n.type, _tree.extractValue(n))));
+              var added = List<NodeSnapshot>.unmodifiable(snapshots.where((s) => !watch.lastIncluded.contains(s.normalizedReference)));
+              var removed = <NodeSnapshot>[];
+              watch.lastIncluded.where((l) => !nodes.any((n) => n.normalizedPath==l)).forEach((li) {
+                var n = _tree.locateNode(li);
+                var value = n==null?null:_tree.extractValue(n);
+                removed.add(NodeSnapshot(watch.requestReference, li, n?.type, value));
+              });
+              removed = List<NodeSnapshot>.unmodifiable(removed);
+              var modified = List<NodeSnapshot>.unmodifiable(snapshots.where((s) => watch.lastIncluded.contains(s.normalizedReference) && 
+                  (tmpReplacedNodes.any((repl) => repl.normalizedPath.isPrefixPathOf(s.normalizedReference)))
+                ||(parentDocs.any((doc) => doc.normalizedPath==s.normalizedReference))
+                ||(parentCols.any((col) => col.normalizedPath==s.normalizedReference))
+              ));
+              var querySnapshot = QuerySnapshot(snapshots, added, modified, removed);
+              watch.controller.add(querySnapshot);
+              watch.lastIncluded=nodes.map((n) => n.normalizedPath).toSet();
+            }
+          });
+          
+        }
+
+        //reset all variables indicate changes in the database tree
+        tmpReplacedNodes = {};
+        tmpBlobReferences = blobReferences.map((key, value) => MapEntry(key,Set<_LeafNode<BlobReference>>.of(value))); //makes copy
+        tmpBlobs = {};
 
       }
 
@@ -91,20 +180,41 @@ class _Backbone {
   }
 
   /// rolls back replaced nodes to their position
-  void rollBack(_Node node) {
+  /*void rollBack(_Node node) {
     if (node.normalizedPath.isRootPath) {
       _tree.root = temporarilyReplacedRoot;
       temporarilyReplacedRoot=null;
     } else {
-      
-    }
-  }
+      // roll bak any changes of children
+      tmpUpdatedDocuments.removeWhere((doc) => node.normalizedPath.isPrefixPathOf(doc.normalizedPath));
+      tmpUpdatedCollections.removeWhere((col) => node.normalizedPath.isPrefixPathOf(col.normalizedPath));
+      var changedChildren = tmpReplacedNodes.where((n) => node.normalizedPath.isPrefixPathOf(n.normalizedPath) && n.normalizedPath!=node.normalizedPath);
+      changedChildren.forEach((n) => rollBack(n));
 
-  Set<_Node> query(NodeReference ref, Schema filter) {
-    var nodes = _tree.resolveMultiPath(ref);
-    nodes.retainWhere((element) => _tree.fitSchema(element, filter??DynamicSchema(), classes));
-    
-  }
+      // redo write
+      var parentDoc = _tree.findYoungestDocumentAncestor(node);
+      var parentCol = _tree.findYoungestCollectionAncestor(node);
+      var parent = node.parentNode;
+
+      if (parentDoc!=null) tmpUpdatedDocuments.add(parentDoc);
+      if (parentCol!=null) tmpUpdatedCollections.add(parentCol);
+
+      if (parent == null) {
+
+      } else
+
+      if (parent is _ListNode) {
+
+      } else
+
+      if (parent is _NamedBranchNode) {
+        if (parent.actionChildren==null) return;
+
+      }
+
+    }
+  }*/
+
 
   void _executeGet(_Action action) {
     var node = _tree.locateNode(action.reference);
@@ -118,8 +228,7 @@ class _Backbone {
   }
 
   void _executeWatch(_Action action) {
-    var node_references = _tree.locateNodeAndReturnReferences(action.reference);
-    var node = node_references[0];
+    var node = _tree.locateNode(action.reference);
     NodeSnapshot snap;
     NodeReference normalizedTarget;
     if (node==null) {
@@ -132,8 +241,39 @@ class _Backbone {
     action.streamController.add(snap);
     var watch = _Watch(action.reference, action.streamController);
     watch.normalizedTarget=normalizedTarget;
-    watch.usedReferenceNodes=node_references[1];
     watches.add(watch);
+  }
+
+  void _executeQuery(_Action action) {
+    var nodes = _tree.resolveMultiPath(action.reference);
+    nodes.retainWhere((element) => _tree.fitSchema(element, action.filterSchema??DynamicSchema(), classes));
+    var snaps = List<NodeSnapshot>.unmodifiable(nodes.map((n) => NodeSnapshot(action.reference, n.normalizedPath, n.type, _tree.extractValue(n))));
+    var querySnap = QuerySnapshot(snaps, snaps, [], []);
+    action.completer.complete(querySnap);
+  }
+
+  void _executeQueryWatch(_Action action) {
+    var nodes = _tree.resolveMultiPath(action.reference);
+    nodes.retainWhere((element) => _tree.fitSchema(element, action.filterSchema??DynamicSchema(), classes));
+    var snaps = List<NodeSnapshot>.unmodifiable(nodes.map((n) => NodeSnapshot(action.reference, n.normalizedPath, n.type, _tree.extractValue(n))));
+    var querySnap = QuerySnapshot(snaps, snaps, [], []);
+    action.streamController.add(querySnap);
+    var watch = _QueryWatch(action.reference,action.streamController,action.filterSchema);
+    queryWatches.add(watch);
+  }
+
+  void _executeGetDatabaseSchema(_Action action) {
+    var system = classes.map((key, value) => MapEntry(key, Schema.decode(value.encode())));
+    action.completer.complete(system);
+  }
+
+  void _executeReadBlob(_Action action) {
+    var blob = blobs[action.blobReference.id];
+    if (blob==null) {
+      action.completer.completeError(BlobDoesNotExistError(action.blobReference));
+    } else {
+      action.completer.complete(blob);
+    }
   }
 
 }
@@ -143,16 +283,15 @@ class _Watch {
   final StreamController<NodeSnapshot> controller;
   /// null if target does not exist
   NodeReference normalizedTarget;
-  /// normalized paths to all references used
-  Set<NodeReference> usedReferenceNodes;
   _Watch(this.requestReference,this.controller);
 }
 
 class _QueryWatch {
   final NodeReference requestReference;
+  final StreamController<QuerySnapshot> controller;
   final Schema filterSchema;
   Set<NodeReference> lastIncluded;
-  _QueryWatch(this.requestReference,this.filterSchema);
+  _QueryWatch(this.requestReference,this.controller,this.filterSchema);
 }
 
 /*

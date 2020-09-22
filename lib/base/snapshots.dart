@@ -35,7 +35,10 @@ class NodeSnapshot {
   /// If the node does not exist, [value] will be set to `null`.
   final dynamic value;
 
-  /// Normalized path to the specific node fetched. If node does not exist, [normalizedReference] is `null`.
+  /// Normalized path to the specific node fetched.
+  /// If node does not exist, [normalizedReference] is `null`.
+  /// If node does not exist, but this snap was included in the removed list of a query snapshot,
+  /// then [normalizedReference] is not `null`, but the normalized reference to the node which is now deleted
   final NodeReference normalizedReference;
 
   /// (Multi-)path which was used for fetching this snapshot.
@@ -67,7 +70,7 @@ class CollectionChildPlaceholder {
 /// - the set of nodes included in this query changes (via creation/deletion/modification)
 /// - a node included in the query is modified
 /// - a document or map node is included in this query and some of its descendant nodes are replaced/created/deleted, excluding all descendants of other documents or collections.
-/// - a collection is included in the query and a document is added to or removed from that collection
+/// - a collection is included in the query and a document is added to or removed from that collection or a document in the collection was changed
 /// - a list is included in the query and an element was added to or removed from the list
 class QuerySnapshot {
   /// Snapshots of all nodes included in the query
